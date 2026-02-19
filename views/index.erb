@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>gtypist در مرورگر</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1e1e2f;
+            color: #f0f0f0;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            direction: rtl;
+        }
+        .container {
+            background: #2d2d3a;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #ffd966;
+        }
+        select, button {
+            font-size: 16px;
+            padding: 8px 12px;
+            margin: 5px;
+            border-radius: 5px;
+            border: none;
+            font-family: inherit;
+        }
+        button {
+            background: #4caf50;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        .lesson-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        .target-line {
+            background: #0f0f1a;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 24px;
+            letter-spacing: 2px;
+            text-align: center;
+            margin-bottom: 20px;
+            border: 2px solid #4a4a6a;
+            direction: ltr;
+            font-weight: bold;
+            color: #bbffbb;
+        }
+        .input-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        #userInput {
+            width: 100%;
+            max-width: 600px;
+            font-size: 22px;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #6a6a8a;
+            background: #0f0f1a;
+            color: #f0f0f0;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            direction: ltr;
+            outline: none;
+        }
+        #userInput:focus {
+            border-color: #ffd966;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            background: #1a1a2e;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 18px;
+            flex-wrap: wrap;
+        }
+        .stat-item {
+            text-align: center;
+            min-width: 120px;
+        }
+        .stat-label {
+            color: #aaa;
+            font-size: 14px;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffd966;
+        }
+        .progress {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 16px;
+            color: #ccc;
+        }
+        .actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        .error-message {
+            color: #ff6b6b;
+            text-align: center;
+            margin-top: 10px;
+            font-size: 16px;
+        }
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #6a6a8a;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⌨️ تمرین تایپ با gtypist (نسخه وب)</h1>
+
+        <div class="lesson-selector">
+            <select id="lessonSelect">
+                <option value="">-- انتخاب درس --</option>
+                <% lessons.each do |lesson| %>
+                    <option value="<%= lesson['id'] %>"><%= lesson['name'] %></option>
+                <% end %>
+            </select>
+            <button id="startBtn" disabled>شروع درس</button>
+        </div>
+
+        <div id="exerciseArea" style="display: none;">
+            <div class="target-line" id="targetLine"></div>
+
+            <div class="input-area">
+                <input type="text" id="userInput" placeholder="اینجا تایپ کنید ..." autocomplete="off" dir="ltr">
+            </div>
+
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-label">سرعت خط (WPM)</div>
+                    <div class="stat-value" id="lineWpm">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">دقت خط</div>
+                    <div class="stat-value" id="lineAccuracy">100%</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">غلط‌های خط</div>
+                    <div class="stat-value" id="lineErrors">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">کل درس (WPM)</div>
+                    <div class="stat-value" id="totalWpm">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">دقت کل</div>
+                    <div class="stat-value" id="totalAccuracy">100%</div>
+                </div>
+            </div>
+
+            <div class="progress">
+                خط <span id="currentLineNum">1</span> از <span id="totalLines">0</span>
+            </div>
+
+            <div class="actions">
+                <button id="nextBtn" disabled>خط بعدی</button>
+                <button id="resetBtn">شروع مجدد درس</button>
+            </div>
+
+            <div id="errorMsg" class="error-message"></div>
+        </div>
+    </div>
+
+    <footer>ساخته شده با Ruby (Sinatra) و ❤️</footer>
+
+    <script>
+        // داده‌های درس از سرور (از طریق locals ارسال شده)
+        const initialLessons = <%= lessons.to_json %>;
+
+        // متغیرهای وضعیت
+        let currentLesson = null;               // { id, name, lines }
+        let currentLineIndex = 0;
+        let lessonLines = [];
+        let lineStartTime = null;
+        // آمار تجمعی
+        let totalCorrect = 0;
+        let totalErrors = 0;
+        // آمار خط جاری
+        let lineCorrect = 0;
+        let lineErrors = 0;
+
+        // عناصر DOM
+        const lessonSelect = document.getElementById('lessonSelect');
+        const startBtn = document.getElementById('startBtn');
+        const exerciseArea = document.getElementById('exerciseArea');
+        const targetLineDiv = document.getElementById('targetLine');
+        const userInput = document.getElementById('userInput');
+        const lineWpmSpan = document.getElementById('lineWpm');
+        const lineAccuracySpan = document.getElementById('lineAccuracy');
+        const lineErrorsSpan = document.getElementById('lineErrors');
+        const totalWpmSpan = document.getElementById('totalWpm');
+        const totalAccuracySpan = document.getElementById('totalAccuracy');
+        const currentLineNumSpan = document.getElementById('currentLineNum');
+        const totalLinesSpan = document.getElementById('totalLines');
+        const nextBtn = document.getElementById('nextBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const errorMsg = document.getElementById('errorMsg');
+
+        // وقتی درس از لیست انتخاب می‌شود، دکمه شروع فعال می‌شود
+        lessonSelect.addEventListener('change', function() {
+            startBtn.disabled = !this.value;
+        });
+
+        // شروع درس
+        startBtn.addEventListener('click', function() {
+            const lessonId = lessonSelect.value;
+            if (!lessonId) return;
+
+            // غیرفعال کردن سلکتور و دکمه شروع
+            lessonSelect.disabled = true;
+            startBtn.disabled = true;
+
+            // دریافت درس از سرور
+            fetch(`/api/lessons/${lessonId}`)
+                .then(res => res.json())
+                .then(lesson => {
+                    currentLesson = lesson;
+                    lessonLines = lesson.lines;
+                    resetLesson();
+                    exerciseArea.style.display = 'block';
+                    totalLinesSpan.textContent = lessonLines.length;
+                    userInput.focus();
+                })
+                .catch(err => {
+                    errorMsg.textContent = 'خطا در بارگذاری درس.';
+                });
+        });
+
+        // بازنشانی درس (برای شروع مجدد یا بعد از تغییر خط)
+        function resetLesson() {
+            currentLineIndex = 0;
+            totalCorrect = 0;
+            totalErrors = 0;
+            lineCorrect = 0;
+            lineErrors = 0;
+            lineStartTime = null;
+            updateLineDisplay();
+            updateStats();
+            userInput.value = '';
+            userInput.disabled = false;
+            nextBtn.disabled = true;
+            errorMsg.textContent = '';
+        }
+
+        // به‌روزرسانی نمایش خط جاری
+        function updateLineDisplay() {
+            if (!lessonLines.length) return;
+            targetLineDiv.textContent = lessonLines[currentLineIndex];
+            currentLineNumSpan.textContent = currentLineIndex + 1;
+        }
+
+        // محاسبه آمار بر اساس ورودی کاربر
+        function computeStats(inputText) {
+            const target = lessonLines[currentLineIndex];
+            const len = Math.max(inputText.length, target.length);
+            let correct = 0;
+            let errors = 0;
+
+            for (let i = 0; i < len; i++) {
+                if (i >= inputText.length) {
+                    // کاراکترهای هدف که تایپ نشده‌اند: خطا محسوب نمی‌شوند (هنوز فرصت هست)
+                    // اما در gtypist معمولاً ناقص تایپ کردن تا پایان خط خطا ندارد.
+                    // ما فقط کاراکترهای تایپ شده را بررسی می‌کنیم.
+                    break;
+                }
+                if (i >= target.length) {
+                    // اضافی تایپ شده: خطا
+                    errors++;
+                } else if (inputText[i] === target[i]) {
+                    correct++;
+                } else {
+                    errors++;
+                }
+            }
+
+            return { correct, errors };
+        }
+
+        // رویداد تایپ در input
+        userInput.addEventListener('input', function() {
+            if (!lessonLines.length) return;
+
+            // شروع تایمر اگر اولین بار است
+            if (lineStartTime === null && this.value.length > 0) {
+                lineStartTime = Date.now();
+            }
+
+            const input = this.value;
+            const { correct, errors } = computeStats(input);
+
+            lineCorrect = correct;
+            lineErrors = errors;
+
+            // فعال کردن دکمه بعدی اگر طول ورودی حداقل به اندازه هدف باشد
+            const target = lessonLines[currentLineIndex];
+            if (input.length >= target.length) {
+                nextBtn.disabled = false;
+            } else {
+                nextBtn.disabled = true;
+            }
+
+            updateStats();
+        });
+
+        // به‌روزرسانی نمایش آمار
+        function updateStats() {
+            // آمار خط
+            lineErrorsSpan.textContent = lineErrors;
+            const totalLineTyped = lineCorrect + lineErrors;
+            const lineAcc = totalLineTyped > 0 ? (lineCorrect / totalLineTyped * 100).toFixed(1) : 100;
+            lineAccuracySpan.textContent = lineAcc + '%';
+
+            // سرعت خط (WPM)
+            if (lineStartTime && lineCorrect > 0) {
+                const elapsedMinutes = (Date.now() - lineStartTime) / 60000;
+                const wpm = (lineCorrect / 5) / elapsedMinutes;
+                lineWpmSpan.textContent = wpm.toFixed(1);
+            } else {
+                lineWpmSpan.textContent = '0';
+            }
+
+            // آمار کل
+            const totalTyped = totalCorrect + totalErrors + lineCorrect + lineErrors;
+            const totalAcc = totalTyped > 0 ? ((totalCorrect + lineCorrect) / totalTyped * 100).toFixed(1) : 100;
+            totalAccuracySpan.textContent = totalAcc + '%';
+
+            // سرعت کل (بر اساس مجموع کاراکترهای درست)
+            if (lineStartTime && (totalCorrect + lineCorrect) > 0) {
+                // زمان کل از شروع اولین خط تا الان تقریبی است، برای سادگی از همان زمان خط جاری استفاده می‌کنیم
+                // می‌توان زمان کل را از ابتدای درس حساب کرد، اما برای سادگی همین بسنده می‌کنیم.
+                const elapsedMinutes = (Date.now() - (lineStartTime || Date.now())) / 60000;
+                const totalWpm = ((totalCorrect + lineCorrect) / 5) / (elapsedMinutes || 0.001);
+                totalWpmSpan.textContent = totalWpm.toFixed(1);
+            } else {
+                totalWpmSpan.textContent = '0';
+            }
+        }
+
+        // حرکت به خط بعدی
+        function goToNextLine() {
+            // اضافه کردن آمار خط جاری به کل
+            totalCorrect += lineCorrect;
+            totalErrors += lineErrors;
+
+            // ریست آمار خط
+            lineCorrect = 0;
+            lineErrors = 0;
+            lineStartTime = null;
+            userInput.value = '';
+            nextBtn.disabled = true;
+
+            // حرکت به خط بعد
+            if (currentLineIndex + 1 < lessonLines.length) {
+                currentLineIndex++;
+                updateLineDisplay();
+                userInput.focus();
+            } else {
+                // پایان درس
+                userInput.disabled = true;
+                targetLineDiv.textContent = '🎉 درس به پایان رسید! تبریک!';
+                nextBtn.disabled = true;
+            }
+
+            updateStats();
+        }
+
+        nextBtn.addEventListener('click', goToNextLine);
+
+        // شروع مجدد درس
+        resetBtn.addEventListener('click', function() {
+            if (!currentLesson) return;
+            resetLesson();
+            userInput.focus();
+        });
+
+        // امکان زدن Enter برای رفتن به خط بعدی
+        userInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !nextBtn.disabled) {
+                e.preventDefault();
+                goToNextLine();
+            }
+        });
+
+        // غیرفعال کردن form submit پیش‌فرض
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>

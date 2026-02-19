@@ -1,0 +1,24 @@
+- id: 1
+  name: "ردیف خانه (Home Row)"
+  lines:
+    - "asdf jkl;"
+    - "asdf jkl;"
+    - "fdsa ;lkj"
+    - "aassddff jjkkll;;"
+    - "jkl; asdf"
+    - "jjkk ll;; aass ddff"
+- id: 2
+  name: "ردیف بالا (Top Row)"
+  lines:
+    - "qwert yuiop"
+    - "qwert yuiop"
+    - "poiuy trewq"
+    - "qawsedrftg yhujikolp"
+    - "q1w2e3r4t5 y6u7i8o9p0"
+- id: 3
+  name: "ردیف پایین (Bottom Row)"
+  lines:
+    - "zxcv bn m"
+    - "zxcv bn m"
+    - ",./ ;'[] \\"
+    - "zaxs cdvf bgn hmj"
